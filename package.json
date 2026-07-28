@@ -1,0 +1,38 @@
+{
+  "name": "campus-lost-and-found",
+  "version": "1.0.0",
+  "description": "Production-grade Lost & Found Portal for College Campus",
+  "main": "server/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "node server/index.js",
+    "client": "vite",
+    "build": "vite build",
+    "seed": "node server/database/seed.js",
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "lucide-react": "^0.380.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^9.0.3",
+    "pdfkit": "^0.15.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sql.js": "^1.11.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.1.2",
+    "vite": "^5.2.11"
+  }
+}

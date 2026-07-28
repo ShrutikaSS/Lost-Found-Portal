@@ -1,0 +1,12 @@
+# Server Configuration & Security (.htaccess)
+
+DirectoryIndex index.php index.html
+Options -Indexes
+ServerSignature Off
+
+# Protect sensitive database file
+<Files "database.sqlite">
+    Order Allow,Deny
+    Deny from all
+</Files>
+
