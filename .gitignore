@@ -1,7 +1,0 @@
-# Git ignore rules (.gitignore)
-node_modules/
-dist/
-.env
-database.sqlite
-uploads/generalDocs/*
-!uploads/generalDocs/.gitkeep
