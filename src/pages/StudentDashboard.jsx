@@ -81,6 +81,29 @@ export default function StudentDashboard({ onSelectItem }) {
     }
   };
 
+  const handleMarkClaimed = async (itemType, itemId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/items/${itemType}/${itemId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ status: 'claimed' })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Item status updated to Claimed & Recovered!', 'success');
+        fetchMyData();
+      } else {
+        showToast(data.error || 'Failed to update item status.', 'error');
+      }
+    } catch (err) {
+      showToast('Server connection error.', 'error');
+    }
+  };
+
   const handleReportLost = async (e) => {
     e.preventDefault();
     if (!lostTitle || !lostCategory || !lostDesc || !lostDate || !lostZone || !lostPhone) {
@@ -246,35 +269,54 @@ export default function StudentDashboard({ onSelectItem }) {
                     <StatusBadge status={item.status} />
                   </div>
 
+                  {/* Matched Found Item Banner */}
+                  {item.matched_found_title && (
+                    <div style={{ background: 'rgba(37, 99, 235, 0.08)', border: '1px solid rgba(37, 99, 235, 0.2)', padding: '0.65rem 1rem', borderRadius: 'var(--radius-md)', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', fontSize: '0.85rem' }}>
+                      <span>⚡ <strong>System Match Found:</strong> Matched with <strong>"{item.matched_found_title}"</strong> ({item.match_score}% Confidence)</span>
+                      {item.matched_found_id && (
+                        <button className="btn btn-secondary btn-sm" style={{ fontSize: '0.75rem', padding: '0.25rem 0.6rem' }} onClick={() => onSelectItem({ id: item.matched_found_id, item_type: 'found', title: item.matched_found_title })}>
+                          View Matched Item Details
+                        </button>
+                      )}
+                    </div>
+                  )}
+
                   {/* Status Pipeline visual tracker */}
                   <div className="pipeline-tracker">
-                    <div className={`pipeline-step ${['submitted', 'verified', 'matched', 'claimed', 'closed'].includes(item.status) ? 'completed' : ''}`}>
+                    <div className={`pipeline-step ${['submitted', 'verified', 'matched', 'claimed', 'returned', 'closed'].includes(item.status) ? 'completed' : ''}`}>
                       <div className="pipeline-dot">1</div>
                       <span>Submitted</span>
                     </div>
-                    <div className={`pipeline-step ${['verified', 'matched', 'claimed', 'closed'].includes(item.status) ? 'completed' : item.status === 'submitted' ? 'active' : ''}`}>
+                    <div className={`pipeline-step ${['verified', 'matched', 'claimed', 'returned', 'closed'].includes(item.status) ? 'completed' : item.status === 'submitted' ? 'active' : ''}`}>
                       <div className="pipeline-dot">2</div>
                       <span>Verification</span>
                     </div>
-                    <div className={`pipeline-step ${['matched', 'claimed', 'closed'].includes(item.status) ? 'completed' : ''}`}>
+                    <div className={`pipeline-step ${['matched', 'claimed', 'returned', 'closed'].includes(item.status) ? 'completed' : ''}`}>
                       <div className="pipeline-dot">3</div>
                       <span>Matched</span>
                     </div>
-                    <div className={`pipeline-step ${['claimed', 'closed'].includes(item.status) ? 'completed' : ''}`}>
+                    <div className={`pipeline-step ${['claimed', 'returned', 'closed'].includes(item.status) ? 'completed' : ''}`}>
                       <div className="pipeline-dot">4</div>
                       <span>Claimed</span>
                     </div>
-                    <div className={`pipeline-step ${item.status === 'closed' ? 'completed' : ''}`}>
+                    <div className={`pipeline-step ${['closed', 'returned'].includes(item.status) ? 'completed' : ''}`}>
                       <div className="pipeline-dot">5</div>
                       <span>Closed</span>
                     </div>
                   </div>
 
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-glass)', paddingTop: '0.75rem' }}>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-glass)', paddingTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <span>Category: <strong>{item.category_name}</strong> | Location: <strong>{item.zone_name}</strong></span>
-                    <button className="btn btn-secondary btn-sm" onClick={() => onSelectItem({ ...item, item_type: 'lost' })}>
-                      <Eye size={14} /> Details
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {!['claimed', 'returned', 'closed'].includes(item.status) && (
+                        <button className="btn btn-primary btn-sm" style={{ background: '#16a34a', borderColor: '#16a34a' }} onClick={() => handleMarkClaimed('lost', item.id)}>
+                          <CheckCircle2 size={14} /> Mark as Recovered
+                        </button>
+                      )}
+                      <button className="btn btn-secondary btn-sm" onClick={() => onSelectItem({ ...item, item_type: 'lost' })}>
+                        <Eye size={14} /> Details
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -309,11 +351,18 @@ export default function StudentDashboard({ onSelectItem }) {
                     </div>
                   </div>
 
-                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-glass)', paddingTop: '0.75rem' }}>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-glass)', paddingTop: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                     <span>Category: <strong>{item.category_name}</strong> | Storage Locker ID: <strong style={{ color: 'var(--secondary)' }}>{item.locker_id || 'Officer Assigned'}</strong></span>
-                    <button className="btn btn-secondary btn-sm" onClick={() => onSelectItem({ ...item, item_type: 'found' })}>
-                      <Eye size={14} /> Details
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      {!['returned', 'claimed', 'closed'].includes(item.status) && (
+                        <button className="btn btn-primary btn-sm" style={{ background: '#16a34a', borderColor: '#16a34a' }} onClick={() => handleMarkClaimed('found', item.id)}>
+                          <CheckCircle2 size={14} /> Mark as Returned
+                        </button>
+                      )}
+                      <button className="btn btn-secondary btn-sm" onClick={() => onSelectItem({ ...item, item_type: 'found' })}>
+                        <Eye size={14} /> Details
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

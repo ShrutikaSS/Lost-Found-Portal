@@ -65,13 +65,16 @@ export default function LoginPage({ setActivePage }) {
         {/* Demo Quick Fill Buttons */}
         <div style={{ marginBottom: '1.5rem', background: '#f8fafc', padding: '0.85rem', borderRadius: 'var(--radius-md)', border: '1px solid #e2e8f0' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Quick Admin & Officer Credentials:
+            Quick Demo Credentials:
           </div>
           <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-            <button className="btn btn-secondary btn-sm" style={{ fontSize: '0.75rem' }} onClick={() => fillDemo('officer@campus.edu', 'Password123!')}>
+            <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: '0.75rem' }} onClick={() => fillDemo('student@campus.edu', 'Password123!')}>
+              🎓 User / Student
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: '0.75rem' }} onClick={() => fillDemo('officer@campus.edu', 'Password123!')}>
               👮 Officer
             </button>
-            <button className="btn btn-secondary btn-sm" style={{ fontSize: '0.75rem' }} onClick={() => fillDemo('admin@campus.edu', 'Password123!')}>
+            <button type="button" className="btn btn-secondary btn-sm" style={{ fontSize: '0.75rem' }} onClick={() => fillDemo('admin@campus.edu', 'Password123!')}>
               ⚙️ Admin
             </button>
           </div>

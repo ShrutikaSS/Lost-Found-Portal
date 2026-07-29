@@ -77,6 +77,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
+// Handle Mark Claimed / Recovered Action
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'mark_claimed') {
+    $item_id = $_POST['item_id'] ?? '';
+    $item_type = $_POST['item_type'] ?? 'lost';
+
+    if ($item_type === 'lost') {
+        $stmt = $pdo->prepare("UPDATE lost_items SET status = 'claimed' WHERE id = ? AND user_id = ?");
+        $stmt->execute([$item_id, $user['id']]);
+    } else {
+        $stmt = $pdo->prepare("UPDATE found_items SET status = 'returned' WHERE id = ? AND user_id = ?");
+        $stmt->execute([$item_id, $user['id']]);
+    }
+
+    set_flash('success', 'Item status updated to Claimed & Recovered!');
+    header('Location: student-dashboard.php?tab=my-reports');
+    exit;
+}
+
 // Fetch User Reports & Claims
 $my_lost = $pdo->prepare("SELECT l.*, c.name as category_name, z.name as zone_name FROM lost_items l JOIN categories c ON l.category_id=c.id JOIN campus_zones z ON l.campus_zone_id=z.id WHERE l.user_id=? ORDER BY l.created_at DESC");
 $my_lost->execute([$user['id']]);
@@ -153,7 +171,7 @@ require_once __DIR__ . '/include/header.php';
               <div class="pipeline-step <?php echo $item['status']==='closed'?'completed':''; ?>"><div class="pipeline-dot">5</div><span>Closed</span></div>
             </div>
 
-            <div style="font-size: 0.85rem; color: #64748b; display: flex; justify-content: space-between; border-top: 1px solid #f1f5f9; padding-top: 0.75rem;">
+            <div style="font-size: 0.85rem; color: #64748b; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
               <span>Category: <strong><?php echo htmlspecialchars($item['category_name']); ?></strong> | Zone: <strong><?php echo htmlspecialchars($item['zone_name']); ?></strong></span>
               <a href="item-details.php?type=lost&id=<?php echo $item['id']; ?>" class="btn btn-secondary btn-sm">👁️ Details</a>
             </div>
@@ -178,9 +196,19 @@ require_once __DIR__ . '/include/header.php';
               <div class="pipeline-step <?php echo in_array($item['status'], ['returned','closed'])?'completed':''; ?>"><div class="pipeline-dot">4</div><span>Returned</span></div>
             </div>
 
-            <div style="font-size: 0.85rem; color: #64748b; display: flex; justify-content: space-between; border-top: 1px solid #f1f5f9; padding-top: 0.75rem;">
+            <div style="font-size: 0.85rem; color: #64748b; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #f1f5f9; padding-top: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
               <span>Category: <strong><?php echo htmlspecialchars($item['category_name']); ?></strong> | Storage Locker: <strong style="color: #0284c7;"><?php echo htmlspecialchars($item['locker_id'] ?: 'Officer Assigned'); ?></strong></span>
-              <a href="item-details.php?type=found&id=<?php echo $item['id']; ?>" class="btn btn-secondary btn-sm">👁️ Details</a>
+              <div style="display: flex; gap: 0.5rem;">
+                <?php if (!in_array($item['status'], ['returned', 'claimed', 'closed'])): ?>
+                  <form action="student-dashboard.php" method="POST" style="margin:0;">
+                    <input type="hidden" name="action" value="mark_claimed">
+                    <input type="hidden" name="item_id" value="<?php echo $item['id']; ?>">
+                    <input type="hidden" name="item_type" value="found">
+                    <button type="submit" class="btn btn-primary btn-sm" style="background: #16a34a; border-color: #16a34a;">✅ Mark as Returned</button>
+                  </form>
+                <?php endif; ?>
+                <a href="item-details.php?type=found&id=<?php echo $item['id']; ?>" class="btn btn-secondary btn-sm">👁️ Details</a>
+              </div>
             </div>
           </div>
         <?php endforeach; ?>

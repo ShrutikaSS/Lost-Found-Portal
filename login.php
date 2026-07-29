@@ -61,9 +61,10 @@ require_once __DIR__ . '/include/header.php';
       <!-- Quick Demo Credentials -->
       <div style="margin-bottom: 1.5rem; background: #f8fafc; padding: 0.85rem; border-radius: var(--radius-md); border: 1px solid #e2e8f0;">
         <div style="font-size: 0.75rem; font-weight: 700; color: #64748b; margin-bottom: 0.5rem; text-transform: uppercase;">
-          Quick Admin & Officer Credentials:
+          Quick Demo Credentials:
         </div>
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+          <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;" onclick="document.getElementById('email').value='student@campus.edu'; document.getElementById('password').value='Password123!';">🎓 User / Student</button>
           <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;" onclick="document.getElementById('email').value='officer@campus.edu'; document.getElementById('password').value='Password123!';">👮 Officer</button>
           <button type="button" class="btn btn-secondary btn-sm" style="font-size: 0.75rem;" onclick="document.getElementById('email').value='admin@campus.edu'; document.getElementById('password').value='Password123!';">⚙️ Admin</button>
         </div>

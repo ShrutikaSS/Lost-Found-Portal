@@ -139,8 +139,8 @@ export default function ItemDetailsPage({ item, onBack, onClaimSubmitted }) {
           </div>
         )}
 
-        {/* Claim Submission Form for Found Available Items */}
-        {isFound && (item.status === 'available' || item.status === 'verified') && (
+        {/* Claim Submission Form for Active Unclosed Items */}
+        {!['claimed', 'returned', 'closed'].includes(item.status) && (
           <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border-glass)', paddingTop: '1.5rem' }}>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <ShieldCheck size={20} color="var(--primary)" /> Submit Property Ownership Claim

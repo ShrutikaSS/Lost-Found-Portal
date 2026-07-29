@@ -285,16 +285,21 @@ router.post('/found', authenticateToken, upload.single('image'), (req, res) => {
 router.get('/my-reports', authenticateToken, (req, res) => {
   try {
     const lostList = db.prepare(`
-      SELECT l.*, c.name as category_name, z.name as zone_name, 'lost' as item_type
+      SELECT l.*, c.name as category_name, z.name as zone_name, 'lost' as item_type,
+             (SELECT status FROM claims WHERE (item_type = 'lost' AND item_id = l.id) OR (item_type = 'found' AND item_id = m.found_item_id) ORDER BY id DESC LIMIT 1) as claim_status,
+             m.id as match_id, m.found_item_id as matched_found_id, f.title as matched_found_title, m.correlation_score as match_score
       FROM lost_items l
       JOIN categories c ON l.category_id = c.id
       JOIN campus_zones z ON l.campus_zone_id = z.id
+      LEFT JOIN matches m ON m.lost_item_id = l.id AND m.status != 'dismissed'
+      LEFT JOIN found_items f ON m.found_item_id = f.id
       WHERE l.user_id = ?
       ORDER BY l.created_at DESC
     `).all(req.user.id);
 
     const foundList = db.prepare(`
-      SELECT f.*, c.name as category_name, z.name as zone_name, 'found' as item_type
+      SELECT f.*, c.name as category_name, z.name as zone_name, 'found' as item_type,
+             (SELECT status FROM claims WHERE item_type = 'found' AND item_id = f.id ORDER BY id DESC LIMIT 1) as claim_status
       FROM found_items f
       JOIN categories c ON f.category_id = c.id
       JOIN campus_zones z ON f.campus_zone_id = z.id
@@ -355,6 +360,57 @@ router.get('/:type/:id', (req, res) => {
     res.status(400).json({ error: 'Invalid item type.' });
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch item details.' });
+  }
+});
+
+// Protected: Update Item Status by Owner or Officer/Admin (e.g. Mark as Claimed / Recovered)
+router.put('/:type/:id/status', authenticateToken, (req, res) => {
+  try {
+    const { type, id } = req.params;
+    const { status } = req.body;
+
+    if (!['submitted', 'verified', 'matched', 'claimed', 'returned', 'closed'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status value.' });
+    }
+
+    const table = type === 'lost' ? 'lost_items' : 'found_items';
+    const item = db.prepare(`SELECT * FROM ${table} WHERE id = ?`).get(id);
+
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found.' });
+    }
+
+    const isOwner = item.user_id === req.user.id;
+    const isOfficerOrAdmin = ['officer', 'admin'].includes(req.user.role);
+
+    if (!isOwner && !isOfficerOrAdmin) {
+      return res.status(403).json({ error: 'Not authorized to update this item status.' });
+    }
+
+    const targetStatus = (type === 'found' && status === 'claimed') ? 'returned' : status;
+    db.prepare(`UPDATE ${table} SET status = ? WHERE id = ?`).run(targetStatus, id);
+
+    // Synchronize linked match and found item status if lost item is claimed or closed
+    if (type === 'lost' && (targetStatus === 'claimed' || targetStatus === 'closed')) {
+      const match = db.prepare('SELECT * FROM matches WHERE lost_item_id = ?').get(id);
+      if (match) {
+        db.prepare("UPDATE matches SET status = 'verified' WHERE id = ?").run(match.id);
+        db.prepare("UPDATE found_items SET status = 'returned' WHERE id = ?").run(match.found_item_id);
+      }
+    } else if (type === 'found' && (targetStatus === 'returned' || targetStatus === 'closed')) {
+      const match = db.prepare('SELECT * FROM matches WHERE found_item_id = ?').get(id);
+      if (match) {
+        db.prepare("UPDATE matches SET status = 'verified' WHERE id = ?").run(match.id);
+        db.prepare("UPDATE lost_items SET status = 'claimed' WHERE id = ?").run(match.lost_item_id);
+      }
+    }
+
+    logAudit(req.user.id, req.user.name, 'UPDATE_ITEM_STATUS', type.toUpperCase() + '_ITEM', id, `Status updated to ${targetStatus}`);
+
+    res.json({ message: `Item status updated to ${targetStatus} successfully! Case closed.`, status: targetStatus });
+  } catch (err) {
+    console.error('Update status error:', err);
+    res.status(500).json({ error: 'Failed to update item status.' });
   }
 });
 

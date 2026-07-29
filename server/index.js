@@ -23,7 +23,7 @@ const PORT = process.env.PORT || 5000;
 
 // Essential Middleware
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: true,
   credentials: true
 }));
 app.use(express.json());

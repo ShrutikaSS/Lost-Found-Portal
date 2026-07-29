@@ -18,12 +18,15 @@ export default function StatusBadge({ status }) {
   } else if (s === 'available') {
     badgeClass = 'badge-available';
     label = 'In Storage Inventory';
-  } else if (s === 'claimed' || s === 'returned') {
+  } else if (s === 'claimed') {
+    badgeClass = 'badge-verified';
+    label = 'Claim Approved';
+  } else if (s === 'returned') {
     badgeClass = 'badge-returned';
-    label = s === 'claimed' ? 'Claimed' : 'Returned to Owner';
+    label = 'Returned to Owner';
   } else if (s === 'closed') {
     badgeClass = 'badge-closed';
-    label = 'Closed';
+    label = 'Case Closed';
   } else if (s === 'pending') {
     badgeClass = 'badge-pending';
     label = 'Claim Pending Review';

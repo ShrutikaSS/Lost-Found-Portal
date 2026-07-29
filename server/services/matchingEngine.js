@@ -111,7 +111,7 @@ export function runMatchingEngine() {
             VALUES (?, ?, ?, 'suggested')
           `).run(lost.id, found.id, score);
 
-          // Update lost item status to 'matched' if it was submitted/verified
+          // Update lost item status to 'matched' when a system match is identified
           db.prepare(`
             UPDATE lost_items SET status = 'matched' WHERE id = ? AND status IN ('submitted', 'verified')
           `).run(lost.id);
@@ -125,6 +125,18 @@ export function runMatchingEngine() {
             'Possible Match Found!',
             `Our system found a ${score}% confidence match for your lost item "${lost.title}". An officer will review it shortly.`
           );
+
+          // Notify found item reporter if distinct user
+          if (found.user_id && found.user_id !== lost.user_id) {
+            db.prepare(`
+              INSERT INTO notifications (user_id, title, message, type)
+              VALUES (?, ?, ?, 'info')
+            `).run(
+              found.user_id,
+              'Found Item Matched with Lost Report',
+              `The found item "${found.title}" you reported has been matched (${score}% confidence) with a lost item report.`
+            );
+          }
 
           matchCount++;
         }

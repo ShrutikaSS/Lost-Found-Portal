@@ -37,10 +37,12 @@ router.post('/', authenticateToken, upload.single('evidenceFile'), (req, res) =>
 
     logAudit(req.user.id, req.user.name, 'SUBMIT_CLAIM', 'CLAIM', result.lastInsertRowid, `Submitted claim for ${item_type} item #${item_id}`);
 
+    // Claim recorded in pending status awaiting officer verification
+
     // Notify item owner / officers
     db.prepare(`
       INSERT INTO notifications (user_id, title, message, type)
-      VALUES (?, ?, ?, 'info')
+      VALUES (?, ?, ?, ?)
     `).run(req.user.id, 'Claim Received', `Your claim for item "${item.title}" has been received and queued for officer review.`, 'info');
 
     res.status(201).json({
@@ -127,11 +129,40 @@ router.put('/:id/review', authenticateToken, requireRole(['officer', 'admin']), 
     logAudit(req.user.id, req.user.name, `CLAIM_${status.toUpperCase()}`, 'CLAIM', id, officer_remarks);
 
     if (status === 'approved') {
-      // Mark target item as Claimed/Returned
       if (claim.item_type === 'lost') {
         db.prepare("UPDATE lost_items SET status = 'claimed' WHERE id = ?").run(claim.item_id);
+
+        // Synchronize linked found item & match
+        const match = db.prepare('SELECT * FROM matches WHERE lost_item_id = ?').get(claim.item_id);
+        if (match) {
+          db.prepare("UPDATE matches SET status = 'verified' WHERE id = ?").run(match.id);
+          db.prepare("UPDATE found_items SET status = 'returned' WHERE id = ?").run(match.found_item_id);
+
+          const foundItem = db.prepare('SELECT user_id, title FROM found_items WHERE id = ?').get(match.found_item_id);
+          if (foundItem && foundItem.user_id) {
+            db.prepare(`
+              INSERT INTO notifications (user_id, title, message, type)
+              VALUES (?, 'Found Property Returned', 'The found item "${foundItem.title}" you reported has been successfully claimed and returned to its verified owner.', 'success')
+            `).run(foundItem.user_id);
+          }
+        }
       } else {
         db.prepare("UPDATE found_items SET status = 'returned' WHERE id = ?").run(claim.item_id);
+
+        // Synchronize linked lost item & match
+        const match = db.prepare('SELECT * FROM matches WHERE found_item_id = ?').get(claim.item_id);
+        if (match) {
+          db.prepare("UPDATE matches SET status = 'verified' WHERE id = ?").run(match.id);
+          db.prepare("UPDATE lost_items SET status = 'claimed' WHERE id = ?").run(match.lost_item_id);
+
+          const lostItem = db.prepare('SELECT user_id, title FROM lost_items WHERE id = ?').get(match.lost_item_id);
+          if (lostItem && lostItem.user_id && lostItem.user_id !== claim.claimant_id) {
+            db.prepare(`
+              INSERT INTO notifications (user_id, title, message, type)
+              VALUES (?, 'Claim Approved & Case Closed!', 'An officer has verified and approved the claim for your lost property "${lostItem.title}". Case is marked as Claimed.', 'success')
+            `).run(lostItem.user_id);
+          }
+        }
       }
 
       // Reject all other pending claims for this exact item
